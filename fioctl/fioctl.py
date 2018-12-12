@@ -21,7 +21,7 @@ def collaborators(project_id):
     )
 
     for collab in merged:
-        click.echo(collab["user_id"])
+        click.echo(f"id={collab['user_id']}, type={collab['_type']}")
 
 @cli.command(help="Updates/reads fioctl config, depending on if the value arg is present")
 @click.argument("path")
