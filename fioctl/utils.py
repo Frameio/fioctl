@@ -3,13 +3,24 @@ import json
 import click
 from tabulate import tabulate
 
-from .config import nested_get
+from .config import nested_get, nested_set
 
 class ListType(click.ParamType):
     def convert(self, value, _param, _ctx):
         if isinstance(value, list):
             return value
         return [val.strip() for val in value.split(",")]
+
+class UpdateType(click.ParamType):
+    def convert(self, value, _param, _ctx):
+        update = [tuple(val.strip().split("=")) for val in value.split(",")]
+        nested_update = [(column.split("."), update) for (column, update) in update]
+
+        update = {}
+        for (nested_key, val) in nested_update:
+            nested_set(update, nested_key, val)
+        
+        return update
 
 class FormatType(click.ParamType):
     def convert(self, value, _param, _ctx):

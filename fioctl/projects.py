@@ -8,7 +8,7 @@ DEFAULT_COLS=['id', 'team_id', 'name', 'owner_id', 'storage', 'collaborator_coun
 
 @click.group()
 def projects():
-    """project related commands"""
+    """Project related commands"""
 
 @projects.command(help="Fetch a single project")
 @click.argument('project_id')
@@ -16,7 +16,16 @@ def projects():
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def get(project_id, format, columns):
     project = fio_client()._api_call('get', f"/projects/{project_id}")
-    click.echo(format(project))
+    click.echo(format(project, cols=columns))
+    
+@projects.command(help="Updates a project")
+@click.argument('project_id')
+@click.option('--values', type=utils.UpdateType())
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def set(project_id, values, format, columns):
+    project = fio_client()._api_call('put', f"/projects/{project_id}", values)
+    click.echo(format(project, cols=columns))
 
 @projects.command(help="List projects for a team")
 @click.argument('team_id')
@@ -38,7 +47,7 @@ def shared(format, columns):
 @projects.command(help="Shows users on a project")
 @click.argument('project_id')
 @click.option('--format', type=utils.FormatType(), default='table')
-@click.option('--columns', type=utils.ListType(), default=["id", "user_id", "email", "inserted_at"])
+@click.option('--columns', type=utils.ListType(), default=["id", "_type", "user_id", "email", "inserted_at"])
 def collaborators(project_id, format, columns):
     collab_stream = fio.stream_endpoint(f"/projects/{project_id}/collaborators")
     pending_collab_stream = fio.stream_endpoint(f"/projects/{project_id}/pending_collaborators")
