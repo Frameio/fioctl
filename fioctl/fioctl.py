@@ -6,6 +6,9 @@ from . import fio
 from .projects import projects
 from .audit_logs import audits
 from .accounts import accounts
+from .teams import teams
+from .assets import assets
+from .users import users
 
 @click.group()
 def cli():
@@ -25,3 +28,6 @@ def config(path, value):
 cli.add_command(projects)
 cli.add_command(audits)
 cli.add_command(accounts)
+cli.add_command(teams)
+cli.add_command(assets)
+cli.add_command(users)
