@@ -12,7 +12,8 @@ setup(name='fioctl',
       install_requires=[
         'Click==6.7',
         'pyyaml',
-        'frameioclient'
+        'frameioclient',
+        'tabulate'
       ],
       entry_points={
         'console_scripts': 'fioctl=fioctl.fioctl:cli'
