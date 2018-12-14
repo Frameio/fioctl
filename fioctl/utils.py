@@ -3,6 +3,14 @@ import json
 import click
 from tabulate import tabulate
 
+from .config import nested_get
+
+class ListType(click.ParamType):
+    def convert(self, value, _param, _ctx):
+        if isinstance(value, list):
+            return value
+        return [val.strip() for val in value.split(",")]
+
 class FormatType(click.ParamType):
     def convert(self, value, _param, _ctx):
         return self.formatters()[value]
@@ -18,37 +26,29 @@ class FormatType(click.ParamType):
 
     def format_table(self, value, cols=None):
         if isinstance(value, dict):
-            return tabulate([(k, self._convert(v)) for (k, v) in value.items()], headers=["attribute", "value"], tablefmt='psql')
+            cols = cols or value.keys()
+            fetch_map = {col: col.split(".") for col in cols}
+            return tabulate(
+                [(col, self._convert(nested_get(value, fetch_map[col]))) for col in cols], headers=["attribute", "value"], tablefmt='psql')
         
-        return tabulate(list(self._list_table_format(value, cols)), headers="firstrow", tablefmt="psql")
+        value = list(value)
+        if not value:
+            return "No results"
+        
+        cols = cols or list(value[0].keys())
+        fetch_map = {col: col.split(".") for col in cols}
+        return tabulate(self._list_table_format(value, cols, fetch_map), headers=cols, tablefmt="psql")
     
     def _convert(self, value):
         if isinstance(value, dict):
             return self.format_json(value)
         return value
         
-    def _list_table_format(self, l, cols):
-        l = list(l)
-        if not l:
-            return
-
-        first = l[0]
+    def _list_table_format(self, l, cols, fetch_map):
+        def tableize_row(row):
+            return [self._convert(nested_get(row, fetch_map[col])) for col in cols]
         
-        def tableize_row(vals):
-            if not cols:
-                return list(self._convert(val) for val in vals.values())
-            
-            return list(self._convert(vals.get(col)) for col in cols)
-        
-        if not cols:
-            yield list(first.keys())
-        else:
-            yield cols
-        
-        yield tableize_row(first)
-
-        for value in l[1:]:
-            yield tableize_row(value)
+        return [tableize_row(row) for row in l]
 
 
 def merge_streams(stream, other_stream, comparison=lambda x, y: x["id"] <= y["id"]):

@@ -4,6 +4,8 @@ from .config import config as fioconf
 from datetime import datetime
 from . import fio
 from .projects import projects
+from .audit_logs import audits
+from .accounts import accounts
 
 @click.group()
 def cli():
@@ -21,3 +23,5 @@ def config(path, value):
     fioconf.set_config(path[0], path[1], value)
 
 cli.add_command(projects)
+cli.add_command(audits)
+cli.add_command(accounts)

@@ -2,21 +2,44 @@ import click
 from . import fio
 from . import utils
 
+from .fio import fio_client
+
+DEFAULT_COLS=['id', 'team_id', 'name', 'owner_id', 'storage', 'collaborator_count', 'root_asset_id']
+
 @click.group()
 def projects():
     """project related commands"""
 
 @projects.command(help="Fetch a single project")
 @click.argument('project_id')
-@click.option('--format', type=utils.FormatType(), default='json')
-def get(project_id, format):
-    project = fio.fio_client()._api_call('get', f"/projects/{project_id}")
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def get(project_id, format, columns):
+    project = fio_client()._api_call('get', f"/projects/{project_id}")
     click.echo(format(project))
+
+@projects.command(help="List projects for a team")
+@click.argument('team_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def list(team_id, format, columns):
+    projects = fio.stream_endpoint(f"/teams/{team_id}/projects")
+
+    click.echo(format(projects, cols=columns))
+
+@projects.command(help="List shared projects you are on")
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def shared(format, columns):
+    projects = fio.stream_endpoint(f"/projects/shared")
+
+    click.echo(format(projects, cols=columns))
 
 @projects.command(help="Shows users on a project")
 @click.argument('project_id')
-@click.option('--format', type=utils.FormatType(), default='json')
-def collaborators(project_id, format):
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=["id", "user_id", "email", "inserted_at"])
+def collaborators(project_id, format, columns):
     collab_stream = fio.stream_endpoint(f"/projects/{project_id}/collaborators")
     pending_collab_stream = fio.stream_endpoint(f"/projects/{project_id}/pending_collaborators")
     merged = utils.merge_streams(
@@ -25,4 +48,4 @@ def collaborators(project_id, format):
         comparison=lambda x, y: utls.datetime_compare(x["inserted_at"], y["inserted_at"])
     )
 
-    click.echo(format(merged, cols=["id", "user_id", "email", "inserted_at"]))
+    click.echo(format(merged, cols=columns))
