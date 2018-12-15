@@ -3,6 +3,7 @@ import itertools
 import json
 import time
 import click
+import concurrent.futures
 from tabulate import tabulate
 
 from .config import nested_get, nested_set
@@ -17,7 +18,7 @@ class ListType(click.ParamType):
 
 class UpdateType(click.ParamType):
     name = "update"
-    
+
     def convert(self, value, _param, _ctx):
         update = [tuple(val.strip().split("=")) for val in value.split(",")]
         nested_update = [(column.split("."), update) for (column, update) in update]
@@ -99,13 +100,17 @@ def datetime_compare(first, second):
 def from_iso(date_string):
     return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
 
-def exec_stream(operations, endpoint):
+def exec_stream(operations, callable):
     for chunk in chunker(operations, 5):
-        for operation in chunk:
-            yield (operation, endpoint(operation))
+        for result in parallelize(callable, chunk):
+            yield result
         
-        # time.sleep(1)
+        if len(chunk) == 5:
+            time.sleep(1)
 
+def parallelize(callable, args):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        return zip(args, executor.map(callable, args))
 
 def chunker(iterable, n):
     it = iter(iterable)

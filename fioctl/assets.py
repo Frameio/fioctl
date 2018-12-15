@@ -3,6 +3,7 @@ import click
 import urllib
 from . import fio
 from . import utils
+from fioctl.assets import utils as asset_utils
 
 from .fio import fio_client
 
@@ -94,48 +95,59 @@ def create_asset(client, parent_id, asset):
     return client._api_call('post', f"/assets/{parent_id}/children", asset)
 
 def upload_asset(client, parent_id, file):
-    filesize = os.path.getsize(file)
-    name     = os.path.basename(file)
-
-    asset = {}
-    asset['name']     = name
-    asset['filesize'] = filesize
-    asset['type']     = 'file'
-    asset = create_asset(client, parent_id, asset)
-    client.upload(asset, open(file, 'rb'))
-    return asset
+   filesize = os.path.getsize(file)
+   name     = os.path.basename(file)
+   asset = {}
+   asset['name']     = name
+   asset['filesize'] = filesize
+   asset['type']     = 'file'
+   asset = create_asset(client, parent_id, asset)
+   client.upload(asset, open(file, 'rb'))
+   return asset
 
 def download_stream(client, parent_id, root):
     os.makedirs(root, exist_ok=True)
+    folders   = []
+    downloads = []
+    def download(operation):
+        url, name, asset_id = operation
+        click.echo(f"Downloading {asset_id} to {name}")
+        urllib.request.urlretrieve(url, name)
+        click.echo(f"Downloaded {asset_id}")
+        return {"destination": name, "source_id": asset_id}
+      
     for asset in fio.stream_endpoint(f"/assets/{parent_id}/children"):
         name = os.path.join(root, asset["name"])
         click.echo(f"Downloading {asset['id']} to {name}")
         if asset["_type"] == "folder":
-            os.makedirs(name, exist_ok=True)
-            for recursive in download_stream(client, asset["id"], name):
-                yield recursive
-
+            folders.append((name, asset["id"]))
         if asset["_type"] == "version_stack":
-            urllib.request.urlretrieve(asset["cover_asset"]["original"], name)
+            downloads.append((asset["cover_asset"]["original"], name, asset["id"]))
         if asset["_type"] == "file":
-            urllib.request.urlretrieve(asset["original"], name)
-        
-        yield {"destination": name, "source_id": asset["id"]}
+            downloads.append((asset["original"], name, asset["id"]))
+    
+    for _, result in utils.parallelize(download, downloads):
+        yield result
+    
+    for folder, asset_id in folders:
+        os.makedirs(folder, exist_ok=True)
+        for result in download_stream(client, asset_id, name):
+            yield result
 
+   
 def upload_stream(client, parent_id, root):
     directories = {root: parent_id}
-
     def create_folder(folder, parent_id):
-        asset = {"type": "folder", "name": folder}
-        return create_asset(client, parent_id, asset)
-    
+        return create_asset(client, parent_id, {"type": "folder", "name": folder})
+   
     def upload_file(directory, file, parent_id):
         file = os.path.join(directory, file)
-        click.echo(f"Uploaded file {file}")
+        click.echo(f"Uploading file {file}")
         asset = upload_asset(client, parent_id, file)
+        click.echo(f"Uploaded file {file}")
         asset["source"] = os.path.relpath(file, root)
         return asset
-
+    
     for directory, subdirs, files in os.walk(root):
         parent_id = directories[directory]
         for folder, asset in utils.exec_stream(subdirs, lambda d: create_folder(d, parent_id)):
@@ -144,8 +156,8 @@ def upload_stream(client, parent_id, root):
             asset["source"] = os.path.relpath(name, root)
             yield asset
             directories[name] = asset["id"]
-        
+       
         for file, asset in utils.exec_stream(files, lambda f : upload_file(directory, f, parent_id)):
             yield asset
-    
+   
     click.echo("Upload results:")
