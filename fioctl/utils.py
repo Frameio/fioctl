@@ -1,17 +1,23 @@
 from datetime import datetime
+import itertools
 import json
+import time
 import click
 from tabulate import tabulate
 
 from .config import nested_get, nested_set
 
 class ListType(click.ParamType):
+    name = "list"
+
     def convert(self, value, _param, _ctx):
         if isinstance(value, list):
             return value
         return [val.strip() for val in value.split(",")]
 
 class UpdateType(click.ParamType):
+    name = "update"
+    
     def convert(self, value, _param, _ctx):
         update = [tuple(val.strip().split("=")) for val in value.split(",")]
         nested_update = [(column.split("."), update) for (column, update) in update]
@@ -23,6 +29,8 @@ class UpdateType(click.ParamType):
         return update
 
 class FormatType(click.ParamType):
+    name = "format"
+
     def convert(self, value, _param, _ctx):
         return self.formatters()[value]
 
@@ -90,3 +98,19 @@ def datetime_compare(first, second):
 
 def from_iso(date_string):
     return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+def exec_stream(operations, endpoint):
+    for chunk in chunker(operations, 5):
+        for operation in chunk:
+            yield (operation, endpoint(operation))
+        
+        # time.sleep(1)
+
+
+def chunker(iterable, n):
+    it = iter(iterable)
+    while True:
+       chunk = tuple(itertools.islice(it, n))
+       if not chunk:
+           return
+       yield chunk
