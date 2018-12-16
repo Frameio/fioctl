@@ -16,4 +16,4 @@ def users():
 def me(format, columns):
     user = fio_client()._api_call('get', '/me')
 
-    click.echo(format(user, cols=columns))
+    format(user, cols=columns)

@@ -16,7 +16,7 @@ def accounts():
 def get(account_id, format, columns):
     account = fio_client()._api_call('get', f"/accounts/{account_id}")
 
-    click.echo(format(account, cols=columns))
+    format(account, cols=columns)
 
 @accounts.command(help="Lists accounts accessible to the current user")
 @click.option('--format', type=utils.FormatType(), default='table')
@@ -24,4 +24,4 @@ def get(account_id, format, columns):
 def list(format, columns):
     accounts = fio.stream_endpoint(f"/accounts")
 
-    click.echo(format(accounts, cols=columns))
+    format(accounts, cols=columns)

@@ -19,7 +19,7 @@ def assets():
 def list(parent_id, format, columns):
     assets = fio.stream_endpoint(f"/assets/{parent_id}/children")
 
-    click.echo(format(assets, cols=columns))
+    format(assets, cols=columns)
 
 @assets.command(help="Views a specific asset")
 @click.argument('asset_id')
@@ -28,7 +28,7 @@ def list(parent_id, format, columns):
 def get(asset_id, format, columns):
     assets= fio_client()._api_call("get", f"/assets/{asset_id}")
 
-    click.echo(format(assets, cols=columns))
+    format(assets, cols=columns)
 
 @assets.command(help="Uploads an asset with a given file")
 @click.argument('parent_id')
@@ -41,7 +41,7 @@ def upload(parent_id, file, values, format, columns, recursive):
     client = fio_client()
     if recursive:
         click.echo("Beginning recursive upload")
-        click.echo(format(upload_stream(client, parent_id, file), cols=["source"] + columns))
+        format(upload_stream(client, parent_id, file), cols=["source"] + columns)
         return
     
     filesize = os.path.getsize(file)
@@ -53,7 +53,7 @@ def upload(parent_id, file, values, format, columns, recursive):
     values['type']     = 'file'
 
     asset = create_asset(client, parent_id, values)
-    click.echo(format(asset, cols=columns))
+    format(asset, cols=columns)
     uploader.upload(asset, open(file, 'rb'))
     
 @assets.command(help="Downloads an asset")
@@ -66,7 +66,7 @@ def download(asset_id, destination, proxy, recursive, format):
     client = fio_client()
     if recursive:
         click.echo("Beginning download")
-        click.echo(format(download_stream(client, asset_id, destination), cols=["source_id", "destination"]))
+        format(download_stream(client, asset_id, destination), cols=["source_id", "destination"])
         return
 
     asset = client._api_call('get', f"/assets/{asset_id}")
@@ -86,7 +86,7 @@ def download(asset_id, destination, proxy, recursive, format):
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def set(asset_id, values, format, columns):
     assets = fio_client()._api_call('put', f"/assets/{asset_id}", values)
-    click.echo(format(assets, cols=columns))
+    format(assets, cols=columns)
 
 def create_asset(client, parent_id, asset):
     return client._api_call('post', f"/assets/{parent_id}/children", asset)

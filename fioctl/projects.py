@@ -16,7 +16,7 @@ def projects():
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def get(project_id, format, columns):
     project = fio_client()._api_call('get', f"/projects/{project_id}")
-    click.echo(format(project, cols=columns))
+    format(project, cols=columns)
     
 @projects.command(help="Updates a project")
 @click.argument('project_id')
@@ -25,7 +25,7 @@ def get(project_id, format, columns):
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def set(project_id, values, format, columns):
     project = fio_client()._api_call('put', f"/projects/{project_id}", values)
-    click.echo(format(project, cols=columns))
+    format(project, cols=columns)
 
 @projects.command(help="List projects for a team")
 @click.argument('team_id')
@@ -34,7 +34,7 @@ def set(project_id, values, format, columns):
 def list(team_id, format, columns):
     projects = fio.stream_endpoint(f"/teams/{team_id}/projects")
 
-    click.echo(format(projects, cols=columns))
+    format(projects, cols=columns)
 
 @projects.command(help="List shared projects you are on")
 @click.option('--format', type=utils.FormatType(), default='table')
@@ -42,7 +42,7 @@ def list(team_id, format, columns):
 def shared(format, columns):
     projects = fio.stream_endpoint(f"/projects/shared")
 
-    click.echo(format(projects, cols=columns))
+    format(projects, cols=columns)
 
 @projects.command(help="Shows users on a project")
 @click.argument('project_id')
@@ -57,4 +57,4 @@ def collaborators(project_id, format, columns):
         comparison=lambda x, y: utls.datetime_compare(x["inserted_at"], y["inserted_at"])
     )
 
-    click.echo(format(merged, cols=columns))
+    format(merged, cols=columns)

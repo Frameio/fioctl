@@ -18,7 +18,7 @@ def list(account_id, format, columns):
     endpoint = f"/accounts/{account_id}/teams" if account_id else "/teams"
     teams = fio.stream_endpoint(endpoint)
 
-    click.echo(format(teams, cols=columns))
+    format(teams, cols=columns)
 
 @teams.command(help="List all teams you're a member of")
 @click.option('--format', type=utils.FormatType(), default='table')
@@ -26,7 +26,7 @@ def list(account_id, format, columns):
 def get(team_id, format, columns):
     team = fio_client()._api_call("get", f"/teams/{team_id}")
 
-    click.echo(format(team, cols=columns))
+    format(team, cols=columns)
 
 @teams.command(help="Updates a team")
 @click.argument('team_id')
@@ -35,4 +35,4 @@ def get(team_id, format, columns):
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def set(team_id, values, format, columns):
     team = fio_client()._api_call('put', f"/teams/{team_id}", values)
-    click.echo(format(team, cols=columns))
+    format(team, cols=columns)

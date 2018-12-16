@@ -10,6 +10,7 @@ import math
 from tabulate import tabulate
 from token_bucket import Limiter
 from token_bucket import MemoryStorage
+from treelib import Node, Tree
 
 from .config import nested_get, nested_set
 
@@ -37,41 +38,83 @@ class UpdateType(click.ParamType):
 class FormatType(click.ParamType):
     name = "format"
 
+    def __init__(self):
+        self.fetch_map = {}
+        super(FormatType, self).__init__()
+
     def convert(self, value, _param, _ctx):
         return self.formatters()[value]
 
     def formatters(self):
         return {
             "json": self.format_json,
-            "table": self.format_table
+            "table": self.format_table,
+            "csv": self.format_csv,
+            "tree": self.format_tree
         }
     
     def format_json(self, value, **kwargs):
+        click.echo(self_format_json(value, **kwargs))
+
+    def _format_json(self, value, **kwargs):
         return json.dumps(value, indent=2, sort_keys=True)
 
-    def format_table(self, value, cols=None):
+    def format_tree(self, values, cols=['id'], root='root', **kwargs):
+        tree = Tree()
+        tree.create_node(root, root)
+        self._build_fetch_map(cols)
+
+        def format_node(value, cols):
+            return ",".join(f"{col}={self._get_column(value, col)}" for col in cols)
+
+        for value in values:
+            tree.create_node(format_node(value, cols), value['id'], 
+                    parent=(value.get('parent_id') or root))
+        tree.show()
+    
+    def format_csv(self, value, cols=['id'], **kwargs):
+        if isinstance(value, dict):
+            value = [value]
+
+        self._build_fetch_map(cols)
+        click.echo(",".join(cols))
+        for val in value:
+            click.echo(self._csv_line(val, cols))
+    
+    def _csv_line(self, value, cols):
+        return ",".join(str(self._get_column(value, col)) for col in cols)
+
+    def format_table(self, value, cols=None, **kwargs):
         if isinstance(value, dict):
             cols = cols or value.keys()
-            fetch_map = {col: col.split(".") for col in cols}
-            return tabulate(
-                [(col, self._convert(nested_get(value, fetch_map[col]))) for col in cols], headers=["attribute", "value"], tablefmt='psql')
+            self._build_fetch_map(cols)
+            click.echo(tabulate([(col, self._convert(self._get_column(value, col))) 
+                                  for col in cols], headers=["attribute", "value"], tablefmt='psql'))
+            return
         
         value = list(value)
         if not value:
-            return "No results"
+            click.echo("No results")
         
         cols = cols or list(value[0].keys())
-        fetch_map = {col: col.split(".") for col in cols}
-        return tabulate(self._list_table_format(value, cols, fetch_map), headers=cols, tablefmt="psql")
+        self._build_fetch_map(cols)
+        click.echo(tabulate(self._list_table_format(value, cols), headers=cols, tablefmt="psql"))
+    
+    def _get_column(self, value, column):
+        column = self.fetch_map.get(column, [column])
+        return nested_get(value, column)
+
+    def _build_fetch_map(self, columns):
+        self.fetch_map = {col: col.split(".") for col in columns}
     
     def _convert(self, value):
         if isinstance(value, dict):
-            return self.format_json(value)
+            return self._format_json(value)
         return value
         
-    def _list_table_format(self, l, cols, fetch_map):
+    def _list_table_format(self, l, cols):
         def tableize_row(row):
-            return [self._convert(nested_get(row, fetch_map[col])) for col in cols]
+            return [self._convert(self._get_column(row, col)) for col in cols]
         
         return [tableize_row(row) for row in l]
 

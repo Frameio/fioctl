@@ -10,7 +10,6 @@ def stream_endpoint(endpoint, page=1, page_size=15, client=None):
     client = client or fio_client()
     def fetch_page(page):
         full_endpoint = f"{endpoint}?page={page}&page_size={page_size}"
-        click.echo(f"Calling {full_endpoint}")
         return client._api_call('get', full_endpoint)
 
     result_list = fetch_page(page)

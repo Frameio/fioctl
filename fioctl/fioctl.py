@@ -9,6 +9,7 @@ from .accounts import accounts
 from .teams import teams
 from .assets import assets
 from .users import users
+from .comments import comments
 
 @click.group()
 def cli():
@@ -31,3 +32,4 @@ cli.add_command(accounts)
 cli.add_command(teams)
 cli.add_command(assets)
 cli.add_command(users)
+cli.add_command(comments)
