@@ -13,7 +13,9 @@ setup(name='fioctl',
         'Click==6.7',
         'pyyaml',
         'frameioclient',
-        'tabulate'
+        'tabulate',
+        'token-bucket',
+        'treelib'
       ],
       entry_points={
         'console_scripts': 'fioctl=fioctl.fioctl:cli'
