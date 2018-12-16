@@ -13,6 +13,7 @@ from token_bucket import MemoryStorage
 from treelib import Node, Tree
 
 from .config import nested_get, nested_set
+from .config import config as fio_config
 
 class ListType(click.ParamType):
     name = "list"
@@ -89,11 +90,12 @@ class FormatType(click.ParamType):
         return ",".join(str(self._get_column(value, col)) for col in cols)
 
     def format_table(self, value, cols=None, **kwargs):
+        tablefmt = fio_config.fetch("table", "fmt") or "psql"
         if isinstance(value, dict):
             cols = cols or value.keys()
             self._build_fetch_map(cols)
             click.echo(tabulate([(col, self._convert(self._get_column(value, col))) 
-                                  for col in cols], headers=["attribute", "value"], tablefmt='psql'))
+                                  for col in cols], headers=["attribute", "value"], tablefmt=tablefmt))
             return
         
         value = list(value)
@@ -102,7 +104,7 @@ class FormatType(click.ParamType):
         
         cols = cols or list(value[0].keys())
         self._build_fetch_map(cols)
-        click.echo(tabulate(self._list_table_format(value, cols), headers=cols, tablefmt="psql"))
+        click.echo(tabulate(self._list_table_format(value, cols), headers=cols, tablefmt=tablefmt))
     
     def _get_column(self, value, column):
         column = self.fetch_map.get(column, [column])
