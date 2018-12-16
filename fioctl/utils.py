@@ -59,19 +59,23 @@ class FormatType(click.ParamType):
     def _format_json(self, value, **kwargs):
         return json.dumps(value, indent=2, sort_keys=True)
 
-    def format_tree(self, values, cols=['id'], root='root', **kwargs):
+    def format_tree(self, values, cols=['id'], root=('root', 'root_id'), line_fmt=None, **kwargs):
+        line_fmt = line_fmt or self._tree_node 
         tree = Tree()
-        tree.create_node(root, root)
+        root_name, root = root
+        tree.create_node(root_name, root)
         self._build_fetch_map(cols)
-
         def format_node(value, cols):
-            return ",".join(f"{col}={self._get_column(value, col)}" for col in cols)
+            return line_fmt((col, self._get_column(value, col)) for col in cols)
 
         for value in values:
             tree.create_node(format_node(value, cols), value['id'], 
                     parent=(value.get('parent_id') or root))
         tree.show()
     
+    def _tree_node(self, col_vals):
+        return ",".join(f"{col}={val}" for col, val in col_vals)
+
     def format_csv(self, value, cols=['id'], **kwargs):
         if isinstance(value, dict):
             value = [value]

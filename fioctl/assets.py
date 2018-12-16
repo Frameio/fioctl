@@ -30,6 +30,18 @@ def get(asset_id, format, columns):
 
     format(assets, cols=columns)
 
+@assets.command(help="Shows the file tree within a given asset")
+@click.argument('asset_id')
+@click.option('--format', type=utils.FormatType(), default='tree')
+@click.option('--columns', type=utils.ListType(), default=['id','type','name'])
+def traverse(asset_id, format, columns):
+    def line_fmt(col_vals):
+        attrs = ', '.join(f"{col}: {val}" for col, val in col_vals)
+        return f"Asset[{attrs}]"
+
+    format((asset for _, asset in folder_stream(fio_client(), asset_id, "/", recurse_vs=True)), 
+        cols=columns, root=(f"Asset[id: {asset_id}]", asset_id), line_fmt=line_fmt)
+
 @assets.command(help="Uploads an asset with a given file")
 @click.argument('parent_id')
 @click.argument('file', type=click.Path(exists=True))
@@ -125,7 +137,7 @@ def download_stream(client, parent_id, root):
     
     click.echo("Download results:")
 
-def folder_stream(client, parent_id, root):
+def folder_stream(client, parent_id, root, recurse_vs=False):
     for asset in fio.stream_endpoint(f"/assets/{parent_id}/children"):
         name = os.path.join(root, asset["name"])
         if asset["_type"] == "folder":
@@ -134,8 +146,14 @@ def folder_stream(client, parent_id, root):
             for result in folder_stream(client, asset['id'], name):
                 yield result
 
-        if asset["_type"] == "version_stack":
+        if recurse_vs and asset['_type'] == 'version_stack':
+            yield (name, asset)
+            for result in folder_stream(client, asset['id'], os.path.join(name, 'versions')):
+                yield result
+
+        elif asset["_type"] == "version_stack":
             yield (name, asset["cover_asset"])
+
         if asset["_type"] == "file":
             yield (name, asset)
 

@@ -25,8 +25,11 @@ def get(comment_id, format, columns):
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def list(asset_id, format, columns):
     comments = fio.stream_endpoint(f"/assets/{asset_id}/comments")
+    def line_fmt(col_vals):
+        attrs = ', '.join(f"{col}: {val}" for col, val in col_vals)
+        return f"Comment[{attrs}]"
 
-    format(comments, cols=columns, root=f"asset[{asset_id}]")
+    format(comments, cols=columns, line_fmt=line_fmt, root=(f"Asset[id: {asset_id}]", asset_id))
 
 @comments.command(help="Lists replies for a comment")
 @click.argument('comment_id')
@@ -34,8 +37,11 @@ def list(asset_id, format, columns):
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def replies(comment_id, format, columns):
     comments = fio.stream_endpoint(f"/comments/{comment_id}/replies")
+    def line_fmt(col_vals):
+        attrs = ', '.join(f"{col}: {val}" for col, val in col_vals)
+        return f"Comment[{attrs}]"
 
-    format(comments, cols=columns, root=f"comment[{comment_id}]")
+    format(comments, cols=columns, line_fmt=line_fmt, root=(f"Comment[id: {comment_id}]", comment_id))
 
 @comments.command(help="Creates a comment for an asset")
 @click.argument('asset_id')
