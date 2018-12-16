@@ -4,7 +4,12 @@ import json
 import time
 import click
 import concurrent.futures
+import os
+import sys
+import math
 from tabulate import tabulate
+from token_bucket import Limiter
+from token_bucket import MemoryStorage
 
 from .config import nested_get, nested_set
 
@@ -100,17 +105,45 @@ def datetime_compare(first, second):
 def from_iso(date_string):
     return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
 
-def exec_stream(operations, callable):
-    for chunk in chunker(operations, 5):
-        for result in parallelize(callable, chunk):
-            yield result
-        
-        if len(chunk) == 5:
-            time.sleep(1)
+def exec_stream(callable, iterable, sync=lambda _: False, capacity=10, rate=10):
+    """
+    Executes a stream according to a defined rate limit.
+    """
+    limiter = Limiter(capacity, rate, MemoryStorage())
+    futures = set()
 
-def parallelize(callable, args):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        return zip(args, executor.map(callable, args))
+    def execute(operation):
+        return (operation, callable(operation))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=capacity) as executor:
+        while True:
+            if not limiter.consume("stream", 1):
+                start = int(time.time())
+                done, pending = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    yield future.result()
+
+                futures = pending
+                if (int(time.time()) - start) < 1:
+                    time.sleep(1.0 / rate) # guarantee there's capacity in the rate limit at end of the loop
+
+            operation = next(iterable, None)
+
+            if not operation:
+                done, _ = concurrent.futures.wait(futures)
+                for future in done:
+                    yield future.result()
+                break
+
+            if sync(operation):
+                yield execute(operation)
+                continue
+
+            futures.add(executor.submit(execute, operation))
+
+def parallelize(callable, iterable, capacity=10):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=capacity) as executor:
+        return executor.map(callable, iterable)
 
 def chunker(iterable, n):
     it = iter(iterable)
@@ -119,3 +152,20 @@ def chunker(iterable, n):
        if not chunk:
            return
        yield chunk
+
+def stream_fs(root):
+    for directory, subdirs, files in os.walk(root):
+        for folder in subdirs:
+            yield ('d', os.path.join(directory, folder))
+        for f in files:
+            yield ('f', os.path.join(directory, f))
+
+def retry(callable, *args, **kwargs):
+    attempt = kwargs.pop('attempt', 0)
+    try:
+        callable(*args, **kwargs)
+    except:
+        click.echo(f"Retrying {sys.exc_info()[0]}")
+        time.sleep(min(.5 * math.pow(2, attempt), 4))
+        kwargs['attempt'] = attempt + 1
+        retry(callable, *args, **kwargs)

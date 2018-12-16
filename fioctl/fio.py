@@ -18,11 +18,11 @@ def stream_endpoint(endpoint, page=1, page_size=15, client=None):
     while True:
         for res in result_list:
             yield res
-            last = res["id"]
 
         if len(result_list) < page_size or result_list[-1]["id"] == last:
             return
         page += 1
+        last = result_list[-1]['id']
         result_list = fetch_page(page)
 
         

@@ -3,8 +3,7 @@ import click
 import urllib
 from . import fio
 from . import utils
-from fioctl.assets import utils as asset_utils
-
+from . import uploader
 from .fio import fio_client
 
 DEFAULT_COLS=['id', 'name', 'type', 'project_id', 'filesize', 'private']
@@ -55,9 +54,7 @@ def upload(parent_id, file, values, format, columns, recursive):
 
     asset = create_asset(client, parent_id, values)
     click.echo(format(asset, cols=columns))
-    click.echo("Uploading...")
-    client.upload(asset, open(file, 'rb'))
-    click.echo("Upload finished")
+    uploader.upload(asset, open(file, 'rb'))
     
 @assets.command(help="Downloads an asset")
 @click.argument('asset_id')
@@ -102,62 +99,69 @@ def upload_asset(client, parent_id, file):
    asset['filesize'] = filesize
    asset['type']     = 'file'
    asset = create_asset(client, parent_id, asset)
-   client.upload(asset, open(file, 'rb'))
+   uploader.upload(asset, open(file, 'rb'))
    return asset
 
 def download_stream(client, parent_id, root):
     os.makedirs(root, exist_ok=True)
-    folders   = []
-    downloads = []
-    def download(operation):
-        url, name, asset_id = operation
+    def download(name, file):
+        url, asset_id = file["original"], file["id"]
         click.echo(f"Downloading {asset_id} to {name}")
         urllib.request.urlretrieve(url, name)
-        click.echo(f"Downloaded {asset_id}")
+        click.echo(f"Downloaded {asset_id} to {name}")
         return {"destination": name, "source_id": asset_id}
-      
-    for asset in fio.stream_endpoint(f"/assets/{parent_id}/children"):
-        name = os.path.join(root, asset["name"])
-        click.echo(f"Downloading {asset['id']} to {name}")
-        if asset["_type"] == "folder":
-            folders.append((name, asset["id"]))
-        if asset["_type"] == "version_stack":
-            downloads.append((asset["cover_asset"]["original"], name, asset["id"]))
-        if asset["_type"] == "file":
-            downloads.append((asset["original"], name, asset["id"]))
     
-    for _, result in utils.parallelize(download, downloads):
+    def make_folder(name, asset):
+        click.echo(f"Creating folder {name} for {asset['id']}")
+        os.makedirs(name, exist_ok=True)
+        return {"destination": name, "source_id": asset['id']}
+    
+    def make_asset(operation):
+        name, asset = operation
+        return (make_folder, download)[asset["_type"] == "file"](name, asset)
+    
+    for result in utils.parallelize(make_asset, folder_stream(client, parent_id, root)):
         yield result
     
-    for folder, asset_id in folders:
-        os.makedirs(folder, exist_ok=True)
-        for result in download_stream(client, asset_id, name):
-            yield result
+    click.echo("Download results:")
+
+def folder_stream(client, parent_id, root):
+    for asset in fio.stream_endpoint(f"/assets/{parent_id}/children"):
+        name = os.path.join(root, asset["name"])
+        if asset["_type"] == "folder":
+            yield (name, asset)
+
+            for result in folder_stream(client, asset['id'], name):
+                yield result
+
+        if asset["_type"] == "version_stack":
+            yield (name, asset["cover_asset"])
+        if asset["_type"] == "file":
+            yield (name, asset)
 
    
 def upload_stream(client, parent_id, root):
     directories = {root: parent_id}
-    def create_folder(folder, parent_id):
-        return create_asset(client, parent_id, {"type": "folder", "name": folder})
+
+    def create_folder(folder):
+        parent_id = directories[os.path.dirname(folder)]
+        asset = create_asset(client, parent_id, {"type": "folder", "name": os.path.basename(folder)})
+        directories[folder] = asset['id']
+        click.echo(f"Created folder for {folder}")
+        asset['source'] = folder
+        return asset
    
-    def upload_file(directory, file, parent_id):
-        file = os.path.join(directory, file)
-        click.echo(f"Uploading file {file}")
-        asset = upload_asset(client, parent_id, file)
-        click.echo(f"Uploaded file {file}")
-        asset["source"] = os.path.relpath(file, root)
+    def upload_file(f):
+        parent_id = directories.get(os.path.dirname(f))
+        asset = upload_asset(client, parent_id, f)
+        asset["source"] = os.path.relpath(f, root)
         return asset
     
-    for directory, subdirs, files in os.walk(root):
-        parent_id = directories[directory]
-        for folder, asset in utils.exec_stream(subdirs, lambda d: create_folder(d, parent_id)):
-            name = os.path.join(directory, folder)
-            click.echo(f"Created directory for {name}")
-            asset["source"] = os.path.relpath(name, root)
-            yield asset
-            directories[name] = asset["id"]
-       
-        for file, asset in utils.exec_stream(files, lambda f : upload_file(directory, f, parent_id)):
-            yield asset
-   
+    def handle_fs(fs):
+        type, path = fs
+        return (create_folder, upload_file)[type == 'f'](path)
+
+    for _, result in utils.exec_stream(handle_fs, utils.stream_fs(root), sync=lambda pair: pair[0] == 'd'):
+        yield result
+
     click.echo("Upload results:")
