@@ -3,8 +3,9 @@ from . import fio
 from . import utils
 
 from .fio import fio_client
+from .config import column_default
 
-DEFAULT_COLS=['id', 'email', 'name', 'email_preferences']
+DEFAULT_COLS=column_default('users', 'id,email,name,email_preferences')
 
 @click.group()
 def users():

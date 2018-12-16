@@ -3,8 +3,9 @@ from . import fio
 from . import utils
 
 from .fio import fio_client
+from .config import column_default
 
-DEFAULT_COLS=['id', 'account_id', 'name', 'creator_id', 'storage', 'member_count', 'collaborator_count']
+DEFAULT_COLS=column_default('teams', 'id,account_id,name,creator_id,storage,member_count,collaborator_count')
 
 @click.group()
 def teams():

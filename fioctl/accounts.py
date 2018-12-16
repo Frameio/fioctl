@@ -2,8 +2,9 @@ import click
 from . import fio
 from . import utils
 from .fio import fio_client
+from .config import column_default
 
-DEFAULT_COLS = ['id', 'owner.email', 'plan.name', 'storage', 'member_count', 'collaborator_count', 'inserted_at']
+DEFAULT_COLS = column_default('accounts', 'id,owner.email,plan.name,storage,member_count,collaborator_count,inserted_at')
 
 @click.group()
 def accounts():

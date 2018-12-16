@@ -5,8 +5,9 @@ from . import fio
 from . import utils
 from . import uploader
 from .fio import fio_client
+from .config import column_default
 
-DEFAULT_COLS=['id', 'name', 'type', 'project_id', 'filesize', 'private']
+DEFAULT_COLS=column_default('assets', 'id,name,type,project_id,filesize,private')
 
 @click.group()
 def assets():

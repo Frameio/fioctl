@@ -3,8 +3,9 @@ from . import fio
 from . import utils
 
 from .fio import fio_client
+from .config import column_default
 
-DEFAULT_COLS=['id', 'team_id', 'name', 'owner_id', 'storage', 'collaborator_count', 'root_asset_id']
+DEFAULT_COLS=column_default('projects', 'id,team_id,name,owner_id,storage,collaborator_count,root_asset_id')
 
 @click.group()
 def projects():

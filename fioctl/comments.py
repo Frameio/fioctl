@@ -3,8 +3,9 @@ from . import fio
 from . import utils
 from . import uploader
 from .fio import fio_client
+from .config import column_default
 
-DEFAULT_COLS = ['id', 'asset_id', 'parent_id', 'text', 'timestamp', 'inserted_at']
+DEFAULT_COLS = column_default('comments', 'id,asset_id,parent_id,text,timestamp,inserted_at')
 
 @click.group()
 def comments():

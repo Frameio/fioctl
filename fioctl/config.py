@@ -30,6 +30,13 @@ class Config():
 
 config = Config()
 
+def column_default(module, default):
+    columns = config.fetch(module, 'columns') or default
+    if isinstance(columns, list):
+        return columns
+    
+    return [col.strip() for col in columns.split(",")]
+
 def nested_get(dic, mapList):    
     for k in mapList: 
       dic = dic[k]
