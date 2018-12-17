@@ -141,22 +141,21 @@ def upload(parent_id, file, values, format, columns, recursive):
 @assets.command(help="Downloads an asset")
 @click.argument('asset_id')
 @click.argument('destination', type=click.Path(), required=False)
-@click.option('--proxy', type=click.Choice(['original', 'h264_360', 'h264_540', 'h264_720', 'h264_1080_best', 'h264_2160']), default='original')
+@click.option('--proxy', type=click.Choice([
+    'original', 'h264_360', 'h264_540', 'h264_720', 'h264_1080_best', 'h264_2160', 'high', 'medium', 'low']), 
+    default='original')
 @click.option('--recursive', is_flag=True)
 @click.option('--format', type=utils.FormatType(), default='table')
 def download(asset_id, destination, proxy, recursive, format):
     client = fio_client()
     if recursive:
         click.echo("Beginning download")
-        format(download_stream(client, asset_id, destination), cols=["source_id", "destination"])
+        format(download_stream(client, asset_id, destination, proxy), cols=["source_id", "destination"])
         return
 
     asset = client._api_call('get', f"/assets/{asset_id}")
-    url = asset[proxy]
-    name, ext = os.path.splitext(asset['name'])
-
-    default_name = f"{name}.{ext}" if proxy == 'original' else f"{name}.{proxy}.mp4"
-    destination  = destination or os.path.abspath(default_name)
+    proxy, url = get_proxy(asset, proxy)
+    destination  = destination or filename(asset, proxy)
     click.echo(f"Downloading to {destination}...")
     urllib.request.urlretrieve(url, destination)
     click.echo("Finished download")
@@ -193,10 +192,50 @@ def upload_asset(client, parent_id, file):
    uploader.upload(asset, open(file, 'rb'))
    return asset
 
-def download_stream(client, parent_id, root):
+PROXY_TABLE={
+    ('high', 'stream'): ['h264_2160', 'h264_1080_best'],
+    ('medium', 'stream'): ['h264_720'],
+    ('low', 'stream'): ['h264_540', 'h264_360'],
+    ('high', 'image'): ['image_high'],
+    ('medium', 'image'): ['image_full'],
+    ('low', 'image'): ['image_small']
+}
+
+PROXY_CASCADE=['high', 'medium', 'low']
+
+def filename(asset, proxy, path=None):
+    def proxy_ext(proxy):
+        if 'image' in proxy:
+            return 'jpeg'
+        return 'mp4'
+
+    name, ext = os.path.splitext(asset['name'])
+    
+    default_name = f"{name}{ext}" if proxy == 'original' else f"{name}.{proxy}.{proxy_ext(proxy)}"
+    return os.path.join(path, default_name) if path else os.path.abspath(default_name)
+
+def get_proxy(asset, proxy):
+    asset_type = 'image' if asset.get('asset_type') == 'document' else asset.get('asset_type', 'stream')
+    if not proxy or proxy == 'original':
+        return ('original', asset['original'])
+
+    if proxy not in PROXY_CASCADE:
+        return asset.get(proxy)
+    
+    idx = PROXY_CASCADE.index(proxy)
+    for level in PROXY_CASCADE[idx:]:
+        for proxy in PROXY_TABLE.get((level, asset_type), []):
+            if asset.get(proxy):
+                return (proxy, asset[proxy])
+    
+    return ('original', asset['original'])
+
+def download_stream(client, parent_id, root, proxy=None):
     os.makedirs(root, exist_ok=True)
     def download(name, file):
-        url, asset_id = file["original"], file["id"]
+        proxy_name, url = get_proxy(file, proxy)
+        asset_id = file["id"]
+        name     = filename(file, proxy_name, os.path.dirname(name))
         click.echo(f"Downloading {asset_id} to {name}")
         urllib.request.urlretrieve(url, name)
         click.echo(f"Downloaded {asset_id} to {name}")
