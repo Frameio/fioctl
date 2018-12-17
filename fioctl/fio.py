@@ -2,8 +2,9 @@ import frameioclient
 import click
 from .config import config as fioconf
 
-def fio_client():
-    token = fioconf.fetch('user', 'bearer_token')
+def fio_client(profile=None):
+    profile = profile or fioconf.fetch('profiles', 'default') or 'default'
+    token = fioconf.fetch(profile, 'bearer_token')
     return frameioclient.FrameioClient(token)
 
 def stream_endpoint(endpoint, page=1, page_size=15, client=None):
