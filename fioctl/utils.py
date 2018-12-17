@@ -55,7 +55,12 @@ class FormatType(click.ParamType):
         }
     
     def format_json(self, value, **kwargs):
-        click.echo(self_format_json(value, **kwargs))
+        if isinstance(value, dict):
+            click.echo(self._format_json(value, **kwargs))
+            return
+
+        for val in value:
+            click.echo(self._format_json(value, **kwargs))
 
     def _format_json(self, value, **kwargs):
         return json.dumps(value, indent=2, sort_keys=True)
@@ -99,9 +104,6 @@ class FormatType(click.ParamType):
             return
         
         value = list(value)
-        if not value:
-            click.echo("No results")
-        
         cols = cols or list(value[0].keys())
         self._build_fetch_map(cols)
         click.echo(tabulate(self._list_table_format(value, cols), headers=cols, tablefmt=tablefmt))

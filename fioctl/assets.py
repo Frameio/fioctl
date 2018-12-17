@@ -43,6 +43,44 @@ def traverse(asset_id, format, columns):
     format((asset for _, asset in folder_stream(fio_client(), asset_id, "/", recurse_vs=True)), 
         cols=columns, root=(f"Asset[id: {asset_id}]", asset_id), line_fmt=line_fmt)
 
+@assets.command(help="Restores a deleted asset")
+@click.argument('asset_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def restore(asset_id, format, columns):
+    asset = fio_client()._api_call('put', f"/assets/{asset_id}/restore")
+    format(asset, cols=columns)
+
+@assets.command(help="Moves an asset to a new parent")
+@click.argument('asset_id')
+@click.argument('parent_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def mv(asset_id, parent_id, format, columns):
+    asset = fio_client()._api_call('post', f"/assets/{parent_id}/move", {'id': asset_id})
+
+    format(asset, cols=columns)
+
+@assets.command(help="Copies an asset a new parent")
+@click.argument('asset_id')
+@click.argument('parent_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def cp(asset_id, parent_id, format, columns):
+    asset = fio_client()._api_call('post', f"/assets/{parent_id}/copy", {'id': asset_id})
+
+    format(asset, cols=columns)
+
+@assets.command(help="Deletes an asset")
+@click.argument('asset_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def rm(asset_id, format, columns):
+    columns.append('deleted_at')
+    asset = fio_client()._api_call('delete', f"/assets/{asset_id}")
+
+    format(asset, cols=columns)
+
 @assets.command(help="Uploads an asset with a given file")
 @click.argument('parent_id')
 @click.argument('file', type=click.Path(exists=True))
@@ -99,6 +137,15 @@ def download(asset_id, destination, proxy, recursive, format):
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
 def set(asset_id, values, format, columns):
     assets = fio_client()._api_call('put', f"/assets/{asset_id}", values)
+    format(assets, cols=columns)
+
+@assets.command(help="Updates an asset")
+@click.argument('parent_id')
+@click.option('--values', type=utils.UpdateType())
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def create(parent_id, values, format, columns):
+    assets = fio_client()._api_call('post', f"/assets/{parent_id}/children", values)
     format(assets, cols=columns)
 
 def create_asset(client, parent_id, asset):

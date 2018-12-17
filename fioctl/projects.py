@@ -1,6 +1,7 @@
 import click
 from . import fio
 from . import utils
+from . import assets
 
 from .fio import fio_client
 from .config import column_default
@@ -44,6 +45,15 @@ def shared(format, columns):
     projects = fio.stream_endpoint(f"/projects/shared")
 
     format(projects, cols=columns)
+
+@projects.command(help="List deleted assets on a project")
+@click.argument('project_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=assets.DEFAULT_COLS)
+def trash(project_id, format, columns):
+    assets = fio.stream_endpoint(f"/projects/{project_id}/trash")
+
+    format(assets, cols=columns)
 
 @projects.command(help="Shows users on a project")
 @click.argument('project_id')

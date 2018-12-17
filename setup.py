@@ -15,7 +15,8 @@ setup(name='fioctl',
         'frameioclient',
         'tabulate',
         'token-bucket',
-        'treelib'
+        'treelib',
+        'cached-property'
       ],
       entry_points={
         'console_scripts': 'fioctl=fioctl.fioctl:cli'
