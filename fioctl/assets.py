@@ -81,6 +81,37 @@ def rm(asset_id, format, columns):
 
     format(asset, cols=columns)
 
+
+@assets.command(help="Updates the workflow status on an asset")
+@click.argument('asset_id')
+@click.argument('label', type=click.Choice(['none', 'in_progress', 'needs_review', 'approved']))
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def label(asset_id, label, format, columns):
+    columns.append('label')
+    asset = fio_client()._api_call('post', f"/assets/{asset_id}/label", {'label': label})
+
+    format(asset, cols=columns)
+
+@assets.command(help="Versions an asset onto another asset")
+@click.argument('asset_id')
+@click.argument('prev_asset_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def version(asset_id, prev_asset_id, format, columns):
+    asset = fio_client()._api_call('post', f"/assets/{prev_asset_id}/version", {'next_asset_id': asset_id})
+
+    format(asset, cols=columns)
+
+@assets.command(help="Unversions an asset")
+@click.argument('asset_id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def unversion(asset_id, format, columns):
+    asset = fio_client()._api_call('delete', f"/assets/{asset_id}/unversion")
+
+    format(asset, cols=columns)
+
 @assets.command(help="Uploads an asset with a given file")
 @click.argument('parent_id')
 @click.argument('file', type=click.Path(exists=True))
