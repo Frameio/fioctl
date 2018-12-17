@@ -10,6 +10,8 @@ from .teams import teams
 from .assets import assets
 from .users import users
 from .comments import comments
+from .presentations import presentations
+from .review_links import review_links
 
 @click.group()
 def cli():
@@ -33,3 +35,5 @@ cli.add_command(teams)
 cli.add_command(assets)
 cli.add_command(users)
 cli.add_command(comments)
+cli.add_command(presentations)
+cli.add_command(review_links)
