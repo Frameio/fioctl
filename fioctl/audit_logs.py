@@ -3,7 +3,7 @@ from . import fio
 from . import utils
 from .config import column_default
 
-DEFAULT_COLS = column_default('audit_logs', "id,actor_id,actor_type,action,resource,inserted_at")
+DEFAULT_COLS = column_default('audits', "id,actor_id,action,resoure._type,resource.id")
 
 @click.group()
 def audits():

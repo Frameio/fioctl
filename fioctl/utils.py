@@ -151,7 +151,7 @@ def merge_streams(stream, other_stream, comparison=lambda x, y: x["id"] <= y["id
 
 
 def datetime_compare(first, second):
-    return from_iso(first) <= from_iso(second)
+    return from_iso(first) < from_iso(second)
 
 def from_iso(date_string):
     return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")

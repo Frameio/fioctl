@@ -1,28 +1,33 @@
 import frameioclient
 import click
 from .config import config as fioconf
+from .config import nested_get
 
 def fio_client(profile=None):
     profile = profile or fioconf.fetch('profiles', 'default') or 'default'
     token = fioconf.fetch(profile, 'bearer_token')
-    return frameioclient.FrameioClient(token)
+    host  = fioconf.fetch(profile, 'host') or 'http://api.frame.io'
+    return frameioclient.FrameioClient(token, host=host)
 
-def stream_endpoint(endpoint, page=1, page_size=15, client=None):
+def stream_endpoint(endpoint, page=1, page_size=15, client=None, dedupe_key=["id"]):
     client = client or fio_client()
     def fetch_page(page):
-        full_endpoint = f"{endpoint}?page={page}&page_size={page_size}"
-        return client._api_call('get', full_endpoint)
+        return client._api_call('get', endpoint, {"page": page, "page_size": page_size})
 
     result_list = fetch_page(page)
     last = None
-    while True:
+    while result_list:
+        if nested_get(result_list[-1], dedupe_key) == last:
+            return
+
         for res in result_list:
             yield res
-
-        if len(result_list) < page_size or result_list[-1]["id"] == last:
+        
+        if len(res) < page_size:
             return
+
         page += 1
-        last = result_list[-1]['id']
+        last = nested_get(result_list[-1], dedupe_key)
         result_list = fetch_page(page)
 
         

@@ -40,10 +40,22 @@ def column_default(module, default):
 
 def nested_get(dic, mapList):    
     for k in mapList: 
-        dic = dic[k]
+        dic = dic.get(k)
+        if not dic:
+            return dic
+
     return dic
 
 def nested_set(dic, keys, value):
     for key in keys[:-1]:
         dic = dic.setdefault(key, {})
     dic[keys[-1]] = value
+
+def nested_move(dic, from_keys, move_keys):
+    val = nested_get(dic, from_keys)
+    if not val:
+        return dic
+    
+    nested_set(dic, move_keys, val)
+    return dic
+    
