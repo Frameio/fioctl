@@ -7,6 +7,7 @@ import concurrent.futures
 import os
 import sys
 import math
+import heapq
 from tabulate import tabulate
 from token_bucket import Limiter
 from token_bucket import MemoryStorage
@@ -127,27 +128,22 @@ class FormatType(click.ParamType):
         return [tableize_row(row) for row in l]
 
 
-def merge_streams(stream, other_stream, comparison=lambda x, y: x["id"] <= y["id"]):
+def merge_streams(*streams, key=lambda x: x['id']):
+    heap = []
     fetch = lambda stream: next(stream, None)
-    head1, head2 = fetch(stream), fetch(other_stream)
+    def enqueue(stream, idx):
+        head = fetch(stream)
+        if not head:
+            return
+        heapq.heappush(heap, (key(head), idx, stream, head))
 
-    while head1 and head2:
-        if comparison(head1, head2):
-            yield head1
-            head1 = fetch(stream)
-        else:
-            yield head2
-            head2 = fetch(other_stream)
-    
-    if head1:
-        yield head1
-        for head1 in stream:
-            yield head1
-    
-    if head2:
-        yield head2
-        for head2 in other_stream:
-            yield head2
+    for idx, stream in enumerate(streams):
+        enqueue(stream, idx)
+
+    while heap:
+        _, idx, stream, result = heapq.heappop(heap)
+        yield result
+        enqueue(stream, idx)
 
 
 def datetime_compare(first, second):

@@ -12,11 +12,12 @@ setup(name='fioctl',
       install_requires=[
         'Click==6.7',
         'pyyaml',
-        'frameioclient',
+        'frameioclient==0.5.1',
         'tabulate',
         'token-bucket',
         'treelib',
-        'cached-property'
+        'cached-property',
+        'furl'
       ],
       entry_points={
         'console_scripts': 'fioctl=fioctl.fioctl:cli'

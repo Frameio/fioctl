@@ -61,12 +61,12 @@ def trash(project_id, format, columns):
 @click.option('--format', type=utils.FormatType(), default='table')
 @click.option('--columns', type=utils.ListType(), default=["id", "_type", "email", "inserted_at"])
 def collaborators(project_id, format, columns):
-    collab_stream = fio.stream_endpoint(f"/projects/{project_id}/collaborators?sort=-user.email", dedupe_key=['user', 'email'])
-    pending_collab_stream = fio.stream_endpoint(f"/projects/{project_id}/pending_collaborators?sort=-email", dedupe_key=['email'])
+    collab_stream = fio.stream_endpoint(f"/projects/{project_id}/collaborators?sort=user.email")
+    pending_collab_stream = fio.stream_endpoint(f"/projects/{project_id}/pending_collaborators?sort=email")
     merged = utils.merge_streams(
-        collab_stream, 
+        (nested_move(c, ['user', 'email'], ['email']) for c in collab_stream), 
         pending_collab_stream,
-        comparison=lambda x, y: x['user']['email'] >= y['email']
+        key=lambda x: x['email']
     )
 
-    format((nested_move(dic, ['user', 'email'], ['email']) for dic in merged), cols=columns)
+    format(merged, cols=columns)
