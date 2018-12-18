@@ -28,6 +28,15 @@ def config(path, value):
     
     fioconf.set_config(path[0], path[1], value)
 
+@cli.command(help='Sets (or returns) the current profile')
+@click.argument('profile', required=False)
+def profile(profile):
+    if not profile:
+        click.echo(fioconf.fetch('profiles', 'default') or 'default')
+        return
+
+    fioconf.set_config('profiles', 'default', profile)
+
 cli.add_command(projects)
 cli.add_command(audits)
 cli.add_command(accounts)
