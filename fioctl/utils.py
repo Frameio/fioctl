@@ -8,6 +8,9 @@ import os
 import sys
 import math
 import heapq
+import urllib
+import threading
+from tqdm import tqdm
 from tabulate import tabulate
 from token_bucket import Limiter
 from token_bucket import MemoryStorage
@@ -127,7 +130,6 @@ class FormatType(click.ParamType):
         
         return [tableize_row(row) for row in l]
 
-
 def merge_streams(*streams, key=lambda x: x['id']):
     heap = []
     fetch = lambda stream: next(stream, None)
@@ -190,7 +192,22 @@ def exec_stream(callable, iterable, sync=lambda _: False, capacity=10, rate=10):
 
 def parallelize(callable, iterable, capacity=10):
     with concurrent.futures.ThreadPoolExecutor(max_workers=capacity) as executor:
-        return executor.map(callable, iterable)
+        for result in executor.map(callable, iterable):
+            yield result
+
+class TqdmUpTo(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
+
+def download(url, name, position=None):
+    tdm_args = dict(unit='B', unit_scale=True, miniters=1, desc=name, leave=False)
+    if position:
+        tdm_args['position'] = position
+    with TqdmUpTo(**tdm_args) as t:
+        urllib.request.urlretrieve(url, filename=name,
+                        reporthook=t.update_to, data=None)
 
 def chunker(iterable, n):
     it = iter(iterable)
@@ -216,3 +233,22 @@ def retry(callable, *args, **kwargs):
         time.sleep(min(.5 * math.pow(2, attempt), 4))
         kwargs['attempt'] = attempt + 1
         retry(callable, *args, **kwargs)
+
+def initialize_tqdm():
+    tqdm.set_lock(threading.RLock())
+
+class PositionTracker(object):
+    def __init__(self, size):
+        self.positions = range(size)
+        self.used = set()
+        self.lock = threading.RLock()
+
+    def acquire(self):
+        with self.lock:
+            position = min(list(pos for pos in self.positions if pos not in self.used))
+            self.used.add(position)
+            return position
+    
+    def release(self, position):
+        with self.lock:
+            self.used.remove(position)

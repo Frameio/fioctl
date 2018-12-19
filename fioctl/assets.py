@@ -1,6 +1,10 @@
 import os
 import click
 import urllib
+import time
+import sys
+from tqdm import tqdm
+from collections import Counter
 from . import fio
 from . import utils
 from . import uploader
@@ -112,6 +116,16 @@ def unversion(asset_id, format, columns):
 
     format(asset, cols=columns)
 
+@assets.command(help="tests tqdm")
+@click.argument('length')
+def tqdm_test(length):
+    def generator():
+        for i in range(int(length)):
+            yield i
+
+    for _ in tqdm(generator(), desc="Iterations"):
+        time.sleep(.5)
+
 @assets.command(help="Uploads an asset with a given file")
 @click.argument('parent_id')
 @click.argument('file', type=click.Path(exists=True))
@@ -121,6 +135,7 @@ def unversion(asset_id, format, columns):
 @click.option('--recursive', is_flag=True)
 def upload(parent_id, file, values, format, columns, recursive):
     client = fio_client()
+    utils.initialize_tqdm()
     if recursive:
         click.echo("Beginning recursive upload")
         format(upload_stream(client, parent_id, file), cols=["source"] + columns)
@@ -148,14 +163,14 @@ def upload(parent_id, file, values, format, columns, recursive):
 @click.option('--format', type=utils.FormatType(), default='table')
 def download(asset_id, destination, proxy, recursive, format):
     client = fio_client()
+    utils.initialize_tqdm()
     if recursive:
-        click.echo("Beginning download")
         format(download_stream(client, asset_id, destination, proxy), cols=["source_id", "destination"])
         return
 
     asset = client._api_call('get', f"/assets/{asset_id}")
     proxy, url = get_proxy(asset, proxy)
-    destination  = destination or filename(asset, proxy)
+    destination  = destination or filename(asset['name'], proxy)
     click.echo(f"Downloading to {destination}...")
     urllib.request.urlretrieve(url, destination)
     click.echo("Finished download")
@@ -181,7 +196,7 @@ def create(parent_id, values, format, columns):
 def create_asset(client, parent_id, asset):
     return client._api_call('post', f"/assets/{parent_id}/children", asset)
 
-def upload_asset(client, parent_id, file):
+def upload_asset(client, parent_id, file, position=None):
    filesize = os.path.getsize(file)
    name     = os.path.basename(file)
    asset = {}
@@ -189,7 +204,7 @@ def upload_asset(client, parent_id, file):
    asset['filesize'] = filesize
    asset['type']     = 'file'
    asset = create_asset(client, parent_id, asset)
-   uploader.upload(asset, open(file, 'rb'))
+   uploader.upload(asset, open(file, 'rb'), position)
    return asset
 
 PROXY_TABLE={
@@ -203,13 +218,13 @@ PROXY_TABLE={
 
 PROXY_CASCADE=['high', 'medium', 'low']
 
-def filename(asset, proxy, path=None):
+def filename(name, proxy, path=None):
     def proxy_ext(proxy):
         if 'image' in proxy:
             return 'jpeg'
         return 'mp4'
 
-    name, ext = os.path.splitext(asset['name'])
+    name, ext = os.path.splitext(name)
     
     default_name = f"{name}{ext}" if proxy == 'original' else f"{name}.{proxy}.{proxy_ext(proxy)}"
     return os.path.join(path, default_name) if path else os.path.abspath(default_name)
@@ -230,19 +245,19 @@ def get_proxy(asset, proxy):
     
     return ('original', asset['original'])
 
-def download_stream(client, parent_id, root, proxy=None):
+def download_stream(client, parent_id, root, proxy=None, capacity=10):
     os.makedirs(root, exist_ok=True)
+    tracker = utils.PositionTracker(capacity)
     def download(name, file):
         proxy_name, url = get_proxy(file, proxy)
         asset_id = file["id"]
-        name     = filename(file, proxy_name, os.path.dirname(name))
-        click.echo(f"Downloading {asset_id} to {name}")
-        urllib.request.urlretrieve(url, name)
-        click.echo(f"Downloaded {asset_id} to {name}")
+        name     = filename(name, proxy_name)
+        position = tracker.acquire()
+        utils.download(url, name, position)
+        tracker.release(position)
         return {"destination": name, "source_id": asset_id}
     
     def make_folder(name, asset):
-        click.echo(f"Creating folder {name} for {asset['id']}")
         os.makedirs(name, exist_ok=True)
         return {"destination": name, "source_id": asset['id']}
     
@@ -250,14 +265,21 @@ def download_stream(client, parent_id, root, proxy=None):
         name, asset = operation
         return (make_folder, download)[asset["_type"] == "file"](name, asset)
     
-    for result in utils.parallelize(make_asset, folder_stream(client, parent_id, root)):
+    for result in utils.parallelize(make_asset, folder_stream(client, parent_id, root), capacity=capacity):
         yield result
     
     click.echo("Download results:")
+    click.echo('---------------')
 
 def folder_stream(client, parent_id, root, recurse_vs=False):
+    sibling_counter = Counter()
     for asset in fio.stream_endpoint(f"/assets/{parent_id}/children"):
         name = os.path.join(root, asset["name"])
+        sibling_counter[name] += 1
+        if sibling_counter[name] > 1:
+            base, ext = os.path.splitext(name)
+            name = f"{base}_{sibling_counter[name]}{ext}"
+
         if asset["_type"] == "folder":
             yield (name, asset)
 
@@ -276,20 +298,21 @@ def folder_stream(client, parent_id, root, recurse_vs=False):
             yield (name, asset)
 
    
-def upload_stream(client, parent_id, root):
+def upload_stream(client, parent_id, root, capacity=10):
     directories = {root: parent_id}
-
+    tracker = utils.PositionTracker(capacity)
     def create_folder(folder):
         parent_id = directories[os.path.dirname(folder)]
         asset = create_asset(client, parent_id, {"type": "folder", "name": os.path.basename(folder)})
         directories[folder] = asset['id']
-        click.echo(f"Created folder for {folder}")
         asset['source'] = folder
         return asset
    
     def upload_file(f):
         parent_id = directories.get(os.path.dirname(f))
-        asset = upload_asset(client, parent_id, f)
+        position = tracker.acquire()
+        asset = upload_asset(client, parent_id, f, position)
+        tracker.release(position)
         asset["source"] = os.path.relpath(f, root)
         return asset
     
@@ -297,7 +320,9 @@ def upload_stream(client, parent_id, root):
         type, path = fs
         return (create_folder, upload_file)[type == 'f'](path)
 
-    for _, result in utils.exec_stream(handle_fs, utils.stream_fs(root), sync=lambda pair: pair[0] == 'd'):
+    for _, result in utils.exec_stream(handle_fs, utils.stream_fs(root),
+                            sync=lambda pair: pair[0] == 'd'):
         yield result
 
     click.echo("Upload results:")
+    click.echo('---------------')

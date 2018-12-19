@@ -3,16 +3,17 @@ import click
 import math
 import requests
 import time
-
+from tqdm import tqdm
 from . import utils
 
-def upload(asset, file):
-    return FrameioUploader(asset, file).upload()
+def upload(asset, file, position=None):
+    return FrameioUploader(asset, file, position=position).upload()
 
 class FrameioUploader(object):
-  def __init__(self, asset, file):
+  def __init__(self, asset, file, position=None):
     self.asset = asset
     self.file = file
+    self.position = position
 
   def _read_chunk(self, file, size):
     while True:
@@ -39,12 +40,19 @@ class FrameioUploader(object):
 
     def handle_chunk(pair):
         i, chunk = pair
-        return utils.retry(self._upload_chunk, upload_urls[i], chunk)
+        utils.retry(self._upload_chunk, upload_urls[i], chunk)
+        return len(chunk)
+    args = dict(
+      total=total_size, 
+      desc=self.asset['name'], 
+      miniters=1, unit='B', 
+      unit_scale=True, 
+      leave=False
+    )
+    if self.position:
+      args['position'] = self.position
 
-    click.echo(f"Uploading {self.asset['name']} in {chunks} chunk(s)")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        for _ in executor.map(handle_chunk, enumerate(self._read_chunk(self.file, size))):
-            chunks_uploaded += 1
-            click.echo(f"Uploaded chunk {chunks_uploaded} of {chunks} for {self.asset['name']}")
-    
-    click.echo(f"Uploaded {self.asset['name']} in {(int(time.time()) - start) / 60.0} mins")
+    with tqdm(**args) as bar:
+      with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+          for size in executor.map(handle_chunk, enumerate(self._read_chunk(self.file, size))):
+              bar.update(size)
