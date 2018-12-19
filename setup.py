@@ -12,6 +12,8 @@ setup(name='fioctl',
       install_requires=[
         'Click==6.7',
         'pyyaml',
+        'requests',
+        'tqdm',
         'frameioclient==0.5.1',
         'tabulate',
         'token-bucket',
