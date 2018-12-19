@@ -205,6 +205,7 @@ def download(url, name, position=None):
     tdm_args = dict(unit='B', unit_scale=True, miniters=1, desc=name, leave=False)
     if position:
         tdm_args['position'] = position
+
     with TqdmUpTo(**tdm_args) as t:
         urllib.request.urlretrieve(url, filename=name,
                         reporthook=t.update_to, data=None)

@@ -116,16 +116,6 @@ def unversion(asset_id, format, columns):
 
     format(asset, cols=columns)
 
-@assets.command(help="tests tqdm")
-@click.argument('length')
-def tqdm_test(length):
-    def generator():
-        for i in range(int(length)):
-            yield i
-
-    for _ in tqdm(generator(), desc="Iterations"):
-        time.sleep(.5)
-
 @assets.command(help="Uploads an asset with a given file")
 @click.argument('parent_id')
 @click.argument('file', type=click.Path(exists=True))

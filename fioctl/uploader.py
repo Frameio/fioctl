@@ -42,6 +42,7 @@ class FrameioUploader(object):
         i, chunk = pair
         utils.retry(self._upload_chunk, upload_urls[i], chunk)
         return len(chunk)
+  
     args = dict(
       total=total_size, 
       desc=self.asset['name'], 
