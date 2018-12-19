@@ -122,7 +122,7 @@ def unversion(asset_id, format, columns):
 @click.option('--values', type=utils.UpdateType())
 @click.option('--format', type=utils.FormatType(), default='table')
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
-@click.option('--recursive', is_flag=True)
+@click.option('--recursive', is_flag=True, help="Upload the contents of the specified folder and all (transitive) subfolders")
 def upload(parent_id, file, values, format, columns, recursive):
     client = fio_client()
     utils.initialize_tqdm()
@@ -149,7 +149,7 @@ def upload(parent_id, file, values, format, columns, recursive):
 @click.option('--proxy', type=click.Choice([
     'original', 'h264_360', 'h264_540', 'h264_720', 'h264_1080_best', 'h264_2160', 'high', 'medium', 'low']), 
     default='original')
-@click.option('--recursive', is_flag=True)
+@click.option('--recursive', is_flag=True, help="Downloads the children of a given asset and all of their (transitive) children")
 @click.option('--format', type=utils.FormatType(), default='table')
 def download(asset_id, destination, proxy, recursive, format):
     client = fio_client()
