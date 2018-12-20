@@ -1,4 +1,5 @@
 import os
+import stat
 import yaml
 from cached_property import cached_property
 
@@ -21,6 +22,7 @@ class Config():
         config = self.config
         nested_set(config, [scope, key], value)
         yaml.dump(config, open(self.filename, "w"), default_flow_style=False)
+        os.chmod(self.filename, stat.S_IRWXU)
     
     def fetch(self, scope, key=None):
         scope = self.config.get(scope, {})

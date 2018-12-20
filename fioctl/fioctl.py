@@ -45,6 +45,14 @@ Basics:
     ```
     """
 
+@cli.command(help="Set up a profile for fioctl")
+def configure():
+    profile = click.prompt("Enter a profile name", default='default')
+    token   = click.prompt("Enter the token for this profile")
+
+    fioconf.set_config(profile, 'bearer_token', token)
+    fioconf.set_config('profiles', 'default', profile)
+
 @cli.command(help="Updates/reads fioctl config, depending on if the value arg is present")
 @click.argument("path")
 @click.argument("value", required=False)

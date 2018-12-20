@@ -16,8 +16,10 @@ Note that it does currently require python3.
 First, generate an access token in frame.io and configure with:
 
 ```bash
-fioctl config default.bearer_token <my_token>
+fioctl configure
 ```
+
+This will ask you to set a profile name, and input your token.
 
 The cli supports multiple profiles in the event you have multiple tokens that can
 be configured.  They can be specified like
