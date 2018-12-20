@@ -195,20 +195,25 @@ def parallelize(callable, iterable, capacity=10):
         for result in executor.map(callable, iterable):
             yield result
 
-class TqdmUpTo(tqdm):
+class Updater(object):
+    def __init__(self, pbar):
+        super(Updater, self).__init__()
+        self.pbar = pbar
+    
     def update_to(self, b=1, bsize=1, tsize=None):
         if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
+            self.pbar.total = tsize
+        self.pbar.update(b * bsize - self.pbar.n)  # will also set self.n = b * bsize
 
-def download(url, name, position=None):
-    tdm_args = dict(unit='B', unit_scale=True, miniters=1, desc=name, leave=False)
+def download(url, name, desc=None, position=None):
+    tdm_args = dict(unit='B', unit_scale=True, miniters=1, desc=(desc or name), leave=False)
     if position:
         tdm_args['position'] = position
 
-    with TqdmUpTo(**tdm_args) as t:
+    with tqdm(**tdm_args) as t:
+        updater = Updater(t)
         urllib.request.urlretrieve(url, filename=name,
-                        reporthook=t.update_to, data=None)
+                        reporthook=updater.update_to, data=None)
 
 def chunker(iterable, n):
     it = iter(iterable)

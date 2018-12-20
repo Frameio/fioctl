@@ -243,7 +243,7 @@ def download_stream(client, parent_id, root, proxy=None, capacity=10):
         asset_id = file["id"]
         name     = filename(name, proxy_name)
         position = tracker.acquire()
-        utils.download(url, name, position)
+        utils.download(url, name, position=position, desc=os.path.relpath(name, root))
         tracker.release(position)
         return {"destination": name, "source_id": asset_id}
     
