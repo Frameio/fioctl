@@ -254,12 +254,9 @@ def download_stream(client, parent_id, root, proxy=None, capacity=10):
     def make_asset(operation):
         name, asset = operation
         return (make_folder, download)[asset["_type"] == "file"](name, asset)
-    
+
     for result in utils.parallelize(make_asset, folder_stream(client, parent_id, root), capacity=capacity):
         yield result
-    
-    click.echo("Download results:")
-    click.echo('---------------')
 
 def folder_stream(client, parent_id, root, recurse_vs=False):
     sibling_counter = Counter()
@@ -313,6 +310,3 @@ def upload_stream(client, parent_id, root, capacity=10):
     for _, result in utils.exec_stream(handle_fs, utils.stream_fs(root),
                             sync=lambda pair: pair[0] == 'd'):
         yield result
-
-    click.echo("Upload results:")
-    click.echo('---------------')
