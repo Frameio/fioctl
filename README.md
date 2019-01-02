@@ -2,7 +2,16 @@
 
 ## Installation
 
-Currently you can only install from source, so:
+### PyPi
+
+The cli requires python3 to take advantage of it's more modern threading capabilities.  So
+you need to do:
+
+```bash
+pip3 install fioctl
+```
+
+### From Source
 
 ```bash
 git clone git@github.com:Frameio/fioctl.git

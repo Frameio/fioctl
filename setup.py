@@ -2,11 +2,13 @@
 
 from setuptools import setup
 
+with open("README.md", "r") as f:
+  long_description = f.read()
+
 setup(name='fioctl',
       version='1.0',
-      description='Frame.io operational tools',
-      author='Michael Guarino',
-      author_email='mguarino@frame.io',
+      description='Frame.io cli',
+      long_description=long_description,
       packages=['fioctl'],
       include_package_data=True,
       install_requires=[
@@ -23,4 +25,7 @@ setup(name='fioctl',
       ],
       entry_points={
         'console_scripts': 'fioctl=fioctl.fioctl:cli'
-      })
+      },
+      author='Frame.io, Inc.',
+      author_email='platform@frame.io',
+      license='MIT')
