@@ -171,7 +171,7 @@ def download(asset_id, destination, proxy, recursive, format):
     proxy, url = get_proxy(asset, proxy)
     destination  = destination or filename(asset['name'], proxy)
     click.echo(f"Downloading to {destination}...")
-    urllib.request.urlretrieve(url, destination)
+    utils.download(url, destination, desc=asset['name'])
     click.echo("Finished download")
 
 @assets.command(help="Updates an asset")
