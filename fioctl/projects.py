@@ -56,6 +56,16 @@ def trash(project_id, format, columns):
 
     format(assets, cols=columns)
 
+@projects.command(help="Deletes a project, collaborator, or pending collaborator")
+@click.argument('type', type=click.Choice(['pending_collaborator', 'collaborator', 'project']), required=False)
+@click.argument('id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=["id", "_type", "deleted_at"])
+def delete(type, id, format, columns):
+    endpoint = f"/projects/{id}" if not type else f"/{type}s/{id}"
+    result = fio_client()._api_call('delete', endpoint)
+    format(result, cols=columns)
+
 @projects.command(help="Shows users on a project")
 @click.argument('project_id')
 @click.option('--format', type=utils.FormatType(), default='table')
