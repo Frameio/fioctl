@@ -56,14 +56,32 @@ def trash(project_id, format, columns):
 
     format(assets, cols=columns)
 
-@projects.command(help="Deletes a project, collaborator, or pending collaborator")
-@click.argument('type', type=click.Choice(['pending_collaborator', 'collaborator', 'project']), required=False)
+@projects.group()
+def delete():
+    """Deletes any of the project-related types"""
+
+@delete.command(help="Deletes a project")
 @click.argument('id')
 @click.option('--format', type=utils.FormatType(), default='table')
-@click.option('--columns', type=utils.ListType(), default=["id", "_type", "deleted_at"])
-def delete(type, id, format, columns):
-    endpoint = f"/projects/{id}" if not type else f"/{type}s/{id}"
-    result = fio_client()._api_call('delete', endpoint)
+@click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
+def project(id, format, columns):
+    result = fio_client()._api_call('delete', f"/projects/{id}")
+    format(result, cols=columns)
+
+@delete.command(help="Deletes a collaborator")
+@click.argument('id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=["id", "_type", "user.email" "deleted_at"])
+def collaborator(id, format, columns):
+    result = fio_client()._api_call('delete', f"/collaborators/{id}")
+    format(result, cols=columns)
+
+@delete.command(help="Deletes a pending collaborator")
+@click.argument('id')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=["id", "_type",  "email"])
+def pending_collaborator(id, format, columns):
+    result = fio_client()._api_call('delete', f"/pending_collaborators/{id}")
     format(result, cols=columns)
 
 @projects.command(help="Shows users on a project")
