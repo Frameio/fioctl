@@ -19,6 +19,14 @@ from treelib import Node, Tree
 from .config import nested_get, nested_set
 from .config import config as fio_config
 
+TRUNCATION_CUTOFF = 100
+
+def truncate_string(string):
+    if not isinstance(string, str):
+        return string
+
+    return (string[:TRUNCATION_CUTOFF] + '...') if len(string) > TRUNCATION_CUTOFF else string
+
 class ListType(click.ParamType):
     name = "list"
 
@@ -114,7 +122,7 @@ class FormatType(click.ParamType):
     
     def _get_column(self, value, column):
         column = self.fetch_map.get(column, [column])
-        return nested_get(value, column)
+        return truncate_string(nested_get(value, column))
 
     def _build_fetch_map(self, columns):
         self.fetch_map = {col: col.split(".") for col in columns}

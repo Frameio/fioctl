@@ -16,11 +16,11 @@ from .review_links import review_links
 @click.group()
 def cli():
     """
-    Frame.io on the command line
-    
-    Commands are organized by application types.  So there are command groups like assets, projects,
-    teams, etc.  For the most part, they follow a RESTful pattern like the api itself, so you'll find
-    `fioctl teams list` as an option along with get, set, create, etc.
+Frame.io on the command line
+
+Commands are organized by application types.  So there are command groups like assets, projects,
+teams, etc.  For the most part, they follow a RESTful pattern like the api itself, so you'll find
+`fioctl teams list` as an option along with get, set, create, etc.
 
 Shared Options:
 
