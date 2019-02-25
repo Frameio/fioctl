@@ -71,7 +71,7 @@ def project(id, format, columns):
 @delete.command(help="Deletes a collaborator")
 @click.argument('id')
 @click.option('--format', type=utils.FormatType(), default='table')
-@click.option('--columns', type=utils.ListType(), default=["id", "_type", "user.email" "deleted_at"])
+@click.option('--columns', type=utils.ListType(), default=["id", "_type", "user.email", "deleted_at"])
 def collaborator(id, format, columns):
     result = fio_client()._api_call('delete', f"/collaborators/{id}")
     format(result, cols=columns)
