@@ -66,11 +66,12 @@ def mv(asset_id, parent_id, format, columns):
     format(asset, cols=columns)
 
 @assets.command(help="Zips an asset and its children up")
-@click.argument("asset_id")
+@click.argument("parent_id")
+@click.option('--asset', multiple=True, help="Asset ids to zip")
 @click.option('--format', type=utils.FormatType(), default='table')
 @click.option('--columns', type=utils.ListType(), default=DEFAULT_COLS)
-def zip(asset_id, format, columns):
-    asset = fio_client()._api_call('post', f"/assets/{asset_id}/zip")
+def zip(parent_id, asset, format, columns):
+    asset = fio_client()._api_call('post', f"/assets/{parent_id}/zip", {"asset_ids": asset})
 
     format(asset, cols=columns)
 
