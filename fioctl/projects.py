@@ -72,8 +72,14 @@ def project(id, format, columns):
 @click.argument('id')
 @click.option('--format', type=utils.FormatType(), default='table')
 @click.option('--columns', type=utils.ListType(), default=["id", "_type", "user.email", "deleted_at"])
-def collaborator(id, format, columns):
-    result = fio_client()._api_call('delete', f"/collaborators/{id}")
+@click.option('--email', help="Email to delete")
+@click.option('--project', help="Project from which to delete")
+def collaborator(id, format, columns, email, project):
+    endpoint = f"/collaborators/{id}"
+    if email and project:
+        endpoint = f"/projects/{project}/collaborators/{id}?email={email}"
+    
+    result = fio_client()._api_call('delete', endpoint)
     format(result, cols=columns)
 
 @delete.command(help="Deletes a pending collaborator")
