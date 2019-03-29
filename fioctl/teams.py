@@ -37,3 +37,17 @@ def get(team_id, format, columns):
 def set(team_id, values, format, columns):
     team = fio_client()._api_call('put', f"/teams/{team_id}", values)
     format(team, cols=columns)
+
+
+@teams.group()
+def create():
+    """Creates team related entities"""
+
+@create.command(help="Creates (or invites) a team member")
+@click.argument('team_id')
+@click.option('--email')
+@click.option('--format', type=utils.FormatType(), default='table')
+@click.option('--columns', type=utils.ListType(), default=["id", "user_id", "email", "inserted_at"])
+def team_member(team_id, email, format, columns):
+    team_member = fio_client()._api_call('post', f"/teams/{team_id}/members", {'email': email, 'role': 'member'})
+    format(team_member, cols=columns)
