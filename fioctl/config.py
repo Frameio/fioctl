@@ -7,7 +7,7 @@ class Config():
     @cached_property
     def config(self):
         if self.exists:
-            return yaml.load(open(self.filename))
+            return yaml.load(open(self.filename), Loader=yaml.FullLoader)
         return {}
 
     @property
