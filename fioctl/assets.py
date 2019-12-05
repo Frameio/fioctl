@@ -20,7 +20,7 @@ def assets():
 
 
 @assets.command(help="List all assets you're a member of")
-@click.argument("parent_id", required=False)
+@click.argument("parent_id")
 @click.option("--format", type=utils.FormatType(), default="table")
 @click.option("--columns", type=utils.ListType(), default=DEFAULT_COLS)
 def list(parent_id, format, columns):
