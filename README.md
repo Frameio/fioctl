@@ -60,3 +60,13 @@ option.  If you want to select a nested attribute in a column, use the `.` opera
 To preserve formatting for a command family, like `projects`, do `fioctl config projects.columns col1,col2,...`.  To set a new table format, do `fioctl config table.fmt <new_table_fmt>`.  Look at the python docs for tabulate to see the options available. 
 
 Update commands usually accept an option like `--values col=val,col.nested=other_val`
+
+
+## Developing
+
+If you'd got an idea for something that you think could make this CLI tool better, here are some tips for getting a development environment setup!
+
+
+#### My print statement isn't work? What's going on?
+
+This CLI is written using [Click](https://click.palletsprojects.com/en/7.x/), and in Click you have to think a little bit differently about how `prints()` work because the app is running in `stdout`. You'll have to use `click.echo('Hello World!')` instead `print()` to see your messages.
