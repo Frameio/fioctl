@@ -1,7 +1,8 @@
-import frameioclient
 import click
+import time
+import sys
 from furl import furl
-from frameioclient import utils as client_utils
+from frameioclient import utils as client_utils, FrameioClient
 from .config import config as fioconf
 from .config import nested_get
 
@@ -9,8 +10,12 @@ from .config import nested_get
 def fio_client(profile=None):
     profile = profile or fioconf.fetch("profiles", "default") or "default"
     token = fioconf.fetch(profile, "bearer_token")
-    host = fioconf.fetch(profile, "host") or "http://api.frame.io"
-    return frameioclient.FrameioClient(token, host=host)
+    host = fioconf.fetch(profile, "host") or "https://api.frame.io"
+    if "http://" in host:
+        click.echo("Please specify a host using HTTPS, this will not work with HTTP. Exiting...")
+        time.sleep(1)
+        sys.exit(1)
+    return FrameioClient(token, host=host)
 
 
 def stream_endpoint(endpoint, page=1, page_size=15, client=None, **_kwargs):
