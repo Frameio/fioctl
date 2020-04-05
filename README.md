@@ -67,6 +67,6 @@ Update commands usually accept an option like `--values col=val,col.nested=other
 If you'd got an idea for something that you think could make this CLI tool better, here are some tips for getting a development environment setup!
 
 
-#### My print statement isn't work? What's going on?
+#### My print statement isn't working? What's going on?
 
 This CLI is written using [Click](https://click.palletsprojects.com/en/7.x/), and in Click you have to think a little bit differently about how `prints()` work because the app is running in `stdout`. You'll have to use `click.echo('Hello World!')` instead `print()` to see your messages.
