@@ -3,6 +3,7 @@ import click
 import urllib
 import time
 import sys
+import mimetypes
 from tqdm import tqdm
 from collections import Counter
 from . import fio
@@ -10,9 +11,7 @@ from . import utils
 from . import uploader
 from .fio import fio_client
 from .config import column_default
-
 DEFAULT_COLS = column_default("assets", "id,name,type,project_id,filesize,private")
-
 
 @click.group()
 def assets():
@@ -176,13 +175,15 @@ def upload(parent_id, file, values, format, columns, recursive):
         format(upload_stream(client, parent_id, file), cols=["source"] + columns)
         return
 
+    filename = os.path.basename(file)
     filesize = os.path.getsize(file)
-    name = os.path.basename(file)
+    filetype = mimetypes.guess_type(file)[0]
 
     values = values or {}
-    values["name"] = name
+    values["name"] = filename
     values["filesize"] = filesize
     values["type"] = "file"
+    values["filetype"] = filetype
 
     asset = create_asset(client, parent_id, values)
     format(asset, cols=columns)

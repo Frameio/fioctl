@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
   long_description = f.read()
 
 setup(name='fioctl',
-      version='1.1',
+      version='1.1.1',
       description='Frame.io cli',
       long_description=long_description,
       packages=['fioctl'],
@@ -16,7 +16,7 @@ setup(name='fioctl',
         'pyyaml',
         'requests',
         'tqdm',
-        'frameioclient==0.5.1',
+        'frameioclient==0.6.0',
         'tabulate',
         'token-bucket',
         'treelib',
