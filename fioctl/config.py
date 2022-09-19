@@ -9,7 +9,7 @@ class Config:
     @cached_property
     def config(self):
         if self.exists:
-            return yaml.load(open(self.filename), Loader=yaml.SafeLoader)
+            return yaml.safe_load(open(self.filename), Loader=yaml.SafeLoader)
         return {}
 
     @property
